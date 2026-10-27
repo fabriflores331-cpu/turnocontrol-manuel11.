@@ -1,0 +1,151 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f97316">
+  <title>TurnoControl · Manuel 11</title>
+  <style>
+    :root {
+      --orange: #f97316;
+      --blue: #173b72;
+      --bg: #f3f6fb;
+      --white: #fff;
+      --text: #172033;
+      --muted: #718096;
+      --border: #e4e9f2;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    header {
+      background: var(--blue);
+      color: white;
+      padding: 24px 20px 30px;
+      border-radius: 0 0 28px 28px;
+    }
+    .brand { font-size: 12px; opacity: .8; letter-spacing: 1.5px; }
+    h1 { margin: 8px 0; font-size: 27px; }
+    header p { margin: 0; opacity: .85; font-size: 14px; }
+    main { max-width: 600px; margin: -12px auto 0; padding: 0 16px 32px; }
+    .card {
+      background: white;
+      padding: 20px;
+      margin-bottom: 16px;
+      border-radius: 20px;
+      box-shadow: 0 6px 24px #173b7210;
+    }
+    h2 { font-size: 17px; margin: 0 0 16px; }
+    label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 6px; }
+    input {
+      width: 100%; padding: 13px; border: 1px solid var(--border);
+      border-radius: 12px; font-size: 15px; background: #fff;
+    }
+    button {
+      width: 100%; border: 0; padding: 14px; border-radius: 12px;
+      font-size: 15px; font-weight: 700; cursor: pointer;
+    }
+    .primary { background: var(--orange); color: white; margin-top: 16px; }
+    .secondary { background: #edf2fa; color: var(--blue); margin-top: 10px; }
+    .status {
+      display: flex; align-items: center; gap: 10px;
+      background: #fff7ed; border-radius: 12px; padding: 13px;
+      font-size: 13px; color: #9a3412;
+    }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--orange); }
+    .muted { color: var(--muted); font-size: 13px; line-height: 1.5; }
+    #app { display: none; }
+    #message { white-space: pre-wrap; margin-top: 12px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">CONTROL DE PERSONAL · 3A</div>
+    <h1>TurnoControl</h1>
+    <p>Manuel 11 · Horarios y asistencia</p>
+  </header>
+
+  <main>
+    <section class="card" id="login">
+      <h2>Ingresar a tu cuenta</h2>
+      <p class="muted">Accede con el correo y la contraseña de tu usuario de Supabase.</p>
+      <label for="email">Correo electrónico</label>
+      <input id="email" type="email" autocomplete="username" placeholder="tu@correo.com">
+      <label for="password">Contraseña</label>
+      <input id="password" type="password" autocomplete="current-password" placeholder="Tu contraseña">
+      <button class="primary" id="loginBtn">Iniciar sesión</button>
+      <div id="message" role="status"></div>
+    </section>
+
+    <section id="app">
+      <section class="card">
+        <h2>¡Bienvenido!</h2>
+        <div class="status"><span class="dot"></span><span id="userInfo">Sesión iniciada</span></div>
+        <p class="muted">Esta es la primera versión de la interfaz. Aún falta conectar los horarios y las marcaciones.</p>
+        <button class="secondary" id="logoutBtn">Cerrar sesión</button>
+      </section>
+    </section>
+
+    <section class="card">
+      <h2>Tu jornada, más sencilla</h2>
+      <p class="muted">Consulta tus horarios y registra tu asistencia desde un solo lugar.</p>
+      <div class="status"><span class="dot"></span> Acceso protegido por tu cuenta</div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { createClient } from
+      'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+    const SUPABASE_URL = 'https://rgadrcvqvqnktwrnimpk.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_eUosdY-2YDNGPw6AIxjhhQ_g_dSV8eI';
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    const $ = id => document.getElementById(id);
+
+    function showMessage(text) {
+      $('message').textContent = text;
+    }
+
+    async function refreshSession() {
+      const { data } = await supabase.auth.getSession();
+      const session = data.session;
+      $('login').style.display = session ? 'none' : 'block';
+      $('app').style.display = session ? 'block' : 'none';
+      if (session) $('userInfo').textContent = session.user.email;
+    }
+
+    $('loginBtn').addEventListener('click', async () => {
+      const email = $('email').value.trim();
+      const password = $('password').value;
+      if (!email || !password) {
+        showMessage('Escribe tu correo y contraseña.');
+        return;
+      }
+      $('loginBtn').disabled = true;
+      showMessage('Verificando acceso…');
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      $('loginBtn').disabled = false;
+      if (error) {
+        showMessage('No se pudo ingresar: ' + error.message);
+        return;
+      }
+      showMessage('');
+      await refreshSession();
+    });
+
+    $('logoutBtn').addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      await refreshSession();
+    });
+
+    supabase.auth.onAuthStateChange(() => refreshSession());
+    await refreshSession();
+  </script>
+</body>
+</html>
